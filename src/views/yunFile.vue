@@ -1,7 +1,7 @@
 <template>
-  <div class="main">
+  <div ref="wrap">
     <!-- 云盘 -->
-    <div class="yun-file bra">
+    <div class="yun-file">
       <div class="yun-file-title flex">
         <text class="f28 fw5 c0">云盘</text>
         <text class="f24 c153 fw4 pl20 pt10 pb10" @click="yunFileMoreEvent">全部</text>
@@ -9,42 +9,71 @@
       <div class="yun-file-content">
         <div class="pb35 bb">
           <text class="f24 fw4 c102">最近使用的文档</text>
-          <div class="flex mt36">
-            <scroller class="yun-scroller" show-scrollbar='false' scroll-direction="horizontal">
-              <div class="flex-ac file-name" v-for="(item, index) in yunFileArr" :key='index' @click='yunFileUserEvent'>
-                <bui-image src="/image/test.jpg" width="52px" height="52px"></bui-image>
-                <div class="flex-jc">
-                  <text class="f24 c51 fw4 mt17 lines2">123312123321321</text>
+          <div class="mt36 file-height">
+            <div class="flex" v-if='isShowTM'>
+              <scrolle v-if='yunFileReleArr.length != 0' class="yun-scroller flex-dr" show-scrollbar='false'
+                scroll-direction="horizontal">
+                <div class="flex-ac file-name" v-for="(item, index) in yunFileReleArr" :key='index'
+                  @click='yunFileUserEvent(item.id)'>
+                  <bui-image src="/image/sleep.png" width="52px" height="52px"></bui-image>
+                  <div class="flex-jc" style="width: 153px">
+                    <text class="f24 c51 fw4 mt17 lines2">123312123321321</text>
+                  </div>
+                </div>
+              </scrolle>
+              <div class="no-file flex-ac flex-jc" v-if='yunFileReleArr.length == 0'>
+                <div class="flex-dr">
+                  <bui-image src="/image/sleep1.png" width="42px" height="39px"></bui-image>
+                  <text class="f26 c51 fw4 pl15 center-height ">{{isErrorBM?'暂无文档':'加载失败'}}</text>
                 </div>
               </div>
-            </scroller>
+            </div>
           </div>
         </div>
         <div class="pb35 bb mt31">
           <text class="f24 fw4 c102">我分享的文档</text>
-          <div class="flex mt36">
-            <scroller class="yun-scroller" show-scrollbar='false' scroll-direction="horizontal">
-              <div class="flex-ac file-name" v-for="(item, index) in yunFileArr" :key='index' @click='yunFileUserEvent'>
-                <bui-image src="/image/test.jpg" width="52px" height="52px"></bui-image>
-                <div class="flex-jc">
-                  <text class="f24 c51 fw4 mt17 lines2"
-                    style="text-align-last: center;justify-content:flex-end">哈哈哈哈哈哈哈哈</text>
+          <div class="mt36 file-height">
+            <div class="flex" v-if='isShowBM'>
+              <scroller v-if='yunFileByMeArr.length != 0' class="yun-scroller flex-dr" show-scrollbar='false'
+                scroll-direction="horizontal">
+                <div class="flex-ac file-name" v-for="(item, index) in yunFileByMeArr" :key='index'
+                  @click='yunFileUserEvent(item.id)'>
+                  <bui-image :src="item.image" width="52px" height="52px"></bui-image>
+                  <div class="flex-jc" style="width: 153px">
+                    <text class="f24 c51 fw4 mt17 lines2">{{item.name}}</text>
+                  </div>
+                </div>
+              </scroller>
+              <div class="no-file flex-ac flex-jc" v-if='yunFileByMeArr.length == 0'>
+                <div class="flex-dr">
+                  <bui-image src="/image/sleep1.png" width="42px" height="39px"></bui-image>
+                  <text class="f26 c51 fw4 pl15 center-height ">{{isErrorBM?'暂无文档':'加载失败'}}</text>
                 </div>
               </div>
-            </scroller>
+            </div>
           </div>
         </div>
         <div class="pb35 mt31">
           <text class="f24 fw4 c102">分享给我的文档</text>
-          <div class="flex mt36">
-            <scroller class="yun-scroller" show-scrollbar='false' scroll-direction="horizontal">
-              <div class="flex-ac file-name" v-for="(item, index) in yunFileArr" :key='index' @click='yunFileUserEvent'>
-                <bui-image src="/image/test.jpg" width="52px" height="52px"></bui-image>
-                <div class="flex-jc">
-                  <text class="f24 c51 fw4 mt17 lines2">121233211231323312</text>
+          <div class="mt36 file-height">
+            <div class="flex" v-if='isShowTM'>
+              <scroller v-if='yunFileToMeArr.length != 0' class="yun-scroller flex-dr" show-scrollbar='false'
+                scroll-direction="horizontal">
+                <div class="flex-ac file-name" v-for="(item, index) in yunFileToMeArr" :key='index'
+                  @click='yunFileUserEvent(item.id)'>
+                  <bui-image :src="item.image" width="52px" height="52px"></bui-image>
+                  <div class="flex-jc" style="width: 153px">
+                    <text class="f24 c51 fw4 mt17 lines2">{{item.name}}</text>
+                  </div>
+                </div>
+              </scroller>
+              <div class="no-content flex-ac flex-jc" v-if='yunFileToMeArr.length==0'>
+                <div class="flex-dr flex-jc">
+                  <bui-image src="/image/sleep1.png" width="42px" height="39px"></bui-image>
+                  <text class="f26 c51 fw4 pl15 center-height ">{{isErrorTM?'暂无任务':'加载失败'}}</text>
                 </div>
               </div>
-            </scroller>
+            </div>
           </div>
         </div>
       </div>
@@ -53,33 +82,199 @@
 </template>
 
 <script>
+  const link = weex.requireModule("LinkModule");
+  const dom = weex.requireModule('dom');
   export default {
     data() {
       return {
-        yunFileArr: ['', '', '', '', '','']
+        yunFileByMeArr: [],
+        yunFileToMeArr: [],
+        yunFileReleArr: [],
+        isErrorBM: true,
+        isErrorRele: true,
+        isErrorTM: true,
+        isShowBM: false,
+        isShowTM: false,
+        isShowRE: false
       }
     },
     methods: {
-      // 更多
       yunFileMoreEvent() {
-        this.$alert()
+        link.launchLinkService(['[OpenBuiltIn] \n key=MyDisk'], (res) => {}, (err) => {});
       },
-      // 常用联系人
-      yunFileUserEvent() {
-        this.$alert()
+      yunFileUserEvent(id) {
+        link.launchLinkService(['[OpenBuiltIn] \n key=DiskDetail \n diskId='+id], (res) => {}, (err) => {});
+      },
+      getFileImages(ext) {
+        let fileImageTypes = {
+          'excel': ['xls', 'xlsx'],
+          'music': ['mp3', 'wma', 'wav', 'mod', 'ogg', 'm4a'],
+          'pdf': ['pdf'],
+          'photo': ['bmp', 'gif', 'jpeg', 'jpg', 'svg', 'png', 'psd'],
+          'ppt': ['ppt', 'pptx'],
+          'txt': ['txt', 'key'],
+          'video': ['rm', 'rmvb', 'wmv', 'avi', 'mp4', '3gp', 'mkv', 'flv', 'mov', 'mpg'],
+          'word': ['doc', 'docx', 'wps'],
+          'zip': ['zip', 'rar', '7z'],
+          'unknow': ['file'],
+          'folder2': ['folder'],
+          'team': ['team']
+        }
+        let fileImages = {};
+        let fileTypeImages = {};
+        for (let fext in fileImageTypes) {
+          fileImages[fext] = '/image/' + fext + '.png';
+          let arr = fileImageTypes[fext];
+          if (arr.length > 0) {
+            for (let i = 0; i < arr.length; i++) {
+              fileTypeImages[arr[i]] = fext;
+            }
+          }
+        }
+        let type = fileTypeImages[ext];
+        if (type) {
+          return fileImages[type];
+        } else {
+          return fileImages['unknow'];
+        }
+      },
+      getToken(success, error) {
+        return new Promise((resolve, reject) => {
+          link.getToken([], res => {
+            resolve(res);
+            success && success(res);
+          }, err => {
+            reject(err);
+            error && error(err);
+          });
+        });
+      },
+      getYunFileData(url, data, token, success, error) {
+        return new Promise((resolve, reject) => {
+          this.$get({
+            url: url,
+            headers: {
+              'Authorization': 'Bearer ' + token
+            },
+            data: data
+          }).then((res) => {
+            resolve(res);
+            success && success(res);
+          }).catch((reason) => {
+            reject(reason);
+            error && error(reason);
+          })
+        });
+      },
+      getYunFile() {
+        this.getToken((token) => {
+            link.getServerConfigs([], (params) => {
+              link.getLoginInfo([], (user) => {
+                let objDataBy = {
+                  by: user.userId,
+                  to: '',
+                  scope: ''
+                }
+
+                let objDataTo = {
+                  by: '',
+                  to: 'U' + user.userId,
+                  scope: ''
+                }
+
+                this.getYunFileData('https://pan.bingosoft.net/openapi//file/share/list',
+                  objDataBy, token.accessToken,
+                  (res) => {
+                    this.isShowBM = true
+                    this.isErrorBM = true
+                    let fileArr = []
+                    for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
+                      let fileObj = {}
+                      const element = res.rows[index];
+                      fileObj['name'] = element.name
+                      fileObj['id'] = element.fileId
+                      if (element.type == 'D') {
+                        fileObj['image'] = '/image/word.png'
+                      } else {
+                        fileObj['image'] = this.getFileImages(element.extension)
+                      }
+                      fileArr.push(fileObj)
+                    }
+                    this.yunFileByMeArr = fileArr
+                    this.broadcastWidgetHeight()
+                  }, (err) => {
+                    this.isShowBM = true
+                    this.isErrorBM = false
+                    this.broadcastWidgetHeight()
+                  })
+
+                this.getYunFileData('https://pan.bingosoft.net/openapi//file/share/list',
+                  objDataTo, token.accessToken,
+                  (res) => {
+                    this.isShowTM = true
+                    this.isErrorTM = true
+                    let fileArr = []
+                    for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
+                      let fileObj = {}
+                      const element = res.rows[index];
+                      fileObj['name'] = element.name
+                      fileObj['id'] = element.fileId
+                      if (element.type == 'D') {
+                        fileObj['image'] = '/image/word.png'
+                      } else {
+                        fileObj['image'] = this.getFileImages(element.extension)
+                      }
+                      fileArr.push(fileObj)
+                    }
+                    this.yunFileToMeArr = fileArr
+                    this.broadcastWidgetHeight()
+                  }, (err) => {
+                    this.isShowTM = true
+                    this.isErrorTM = false
+                    this.broadcastWidgetHeight()
+                  })
+              }, (err) => {
+                this.error()
+              })
+            }, () => {
+              this.error()
+            });
+          },
+          (err) => {
+            this.error()
+          })
+      },
+      error() {
+        this.isShowTM = true
+        this.isShowBM = true
+        this.isShowRE = true
+        this.isErrorBM = false
+        this.isErrorRele = false
+        this.isErrorTM = false
+        this.broadcastWidgetHeight()
+      },
+      broadcastWidgetHeight() {
+        let _params = this.$getPageParams();
+        setTimeout(() => {
+          dom.getComponentRect(this.$refs.wrap, (ret) => {
+            var channel = new BroadcastChannel('WidgetsMessage')
+            channel.postMessage({
+              widgetHeight: ret.size.height,
+              id: _params.id
+            });
+            channel.close();
+          });
+        }, 100)
       }
+    },
+    mounted() {
+      this.getYunFile()
     }
   }
 </script>
 
 <style lang="css" src="../css/common.css"></style>
 <style>
-  .main {
-    flex: 1;
-    padding-top: 100px;
-    background-color: #666;
-  }
-
   .yun-file {
     background-color: #fff;
   }
@@ -99,7 +294,21 @@
   }
 
   .yun-scroller {
-    width: 792px;
+    width: 720px;
     height: 140px;
+  }
+
+  .no-file {
+    height: 166px;
+    width: 750px
+  }
+
+  .no-content {
+    height: 166px;
+    width: 750px
+  }
+
+  .center-height {
+    line-height: 40px;
   }
 </style>
