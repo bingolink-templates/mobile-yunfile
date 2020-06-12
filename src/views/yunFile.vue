@@ -83,6 +83,7 @@
 
 <script>
   const link = weex.requireModule("LinkModule");
+  const linkapi = require("linkapi");
   const dom = weex.requireModule('dom');
   export default {
     data() {
@@ -95,7 +96,8 @@
         isErrorTM: true,
         isShowBM: false,
         isShowTM: false,
-        isShowRE: false
+        isShowRE: false,
+        channel: new BroadcastChannel('WidgetsMessage')
       }
     },
     methods: {
@@ -103,7 +105,7 @@
         link.launchLinkService(['[OpenBuiltIn] \n key=MyDisk'], (res) => {}, (err) => {});
       },
       yunFileUserEvent(id) {
-        link.launchLinkService(['[OpenBuiltIn] \n key=DiskDetail \n diskId='+id], (res) => {}, (err) => {});
+        link.launchLinkService(['[OpenBuiltIn] \n key=DiskDetail \n diskId=' + id], (res) => {}, (err) => {});
       },
       getFileImages(ext) {
         let fileImageTypes = {
@@ -138,111 +140,78 @@
           return fileImages['unknow'];
         }
       },
-      getToken(success, error) {
-        return new Promise((resolve, reject) => {
-          link.getToken([], res => {
-            resolve(res);
-            success && success(res);
-          }, err => {
-            reject(err);
-            error && error(err);
-          });
-        });
-      },
-      getYunFileData(url, data, token, success, error) {
-        return new Promise((resolve, reject) => {
-          this.$get({
-            url: url,
-            headers: {
-              'Authorization': 'Bearer ' + token
-            },
-            data: data
-          }).then((res) => {
-            resolve(res);
-            success && success(res);
-          }).catch((reason) => {
-            reject(reason);
-            error && error(reason);
-          })
-        });
-      },
       getYunFile() {
-        this.getToken((token) => {
-            link.getServerConfigs([], (params) => {
-              link.getLoginInfo([], (user) => {
-                let objDataBy = {
-                  by: user.userId,
-                  to: '',
-                  scope: ''
+        link.getServerConfigs([], (params) => {
+          link.getLoginInfo([], (user) => {
+            let objDataBy = {
+              by: user.userId,
+              to: '',
+              scope: ''
+            }
+            let objDataTo = {
+              by: '',
+              to: 'U' + user.userId,
+              scope: ''
+            }
+            linkapi.get({
+              url: 'https://pan.bingosoft.net/openapi//file/share/list',
+              data: objDataBy
+            }).then((res) => {
+              this.isShowBM = true
+              this.isErrorBM = true
+              let fileArr = []
+              for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
+                let fileObj = {}
+                const element = res.rows[index];
+                fileObj['name'] = element.name
+                fileObj['id'] = element.fileId
+                if (element.type == 'D') {
+                  fileObj['image'] = '/image/word.png'
+                } else {
+                  fileObj['image'] = this.getFileImages(element.extension)
                 }
+                fileArr.push(fileObj)
+              }
+              this.yunFileByMeArr = fileArr
+              this.broadcastWidgetHeight()
+            }, (err) => {
+              this.isShowBM = true
+              this.isErrorBM = false
+              this.broadcastWidgetHeight()
+            })
 
-                let objDataTo = {
-                  by: '',
-                  to: 'U' + user.userId,
-                  scope: ''
+            linkapi.get({
+              url: 'https://pan.bingosoft.net/openapi//file/share/list',
+              data: objDataBy
+            }).then((res) => {
+              this.isShowTM = true
+              this.isErrorTM = true
+              let fileArr = []
+              for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
+                let fileObj = {}
+                const element = res.rows[index];
+                fileObj['name'] = element.name
+                fileObj['id'] = element.fileId
+                if (element.type == 'D') {
+                  fileObj['image'] = '/image/word.png'
+                } else {
+                  fileObj['image'] = this.getFileImages(element.extension)
                 }
-
-                this.getYunFileData('https://pan.bingosoft.net/openapi//file/share/list',
-                  objDataBy, token.accessToken,
-                  (res) => {
-                    this.isShowBM = true
-                    this.isErrorBM = true
-                    let fileArr = []
-                    for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
-                      let fileObj = {}
-                      const element = res.rows[index];
-                      fileObj['name'] = element.name
-                      fileObj['id'] = element.fileId
-                      if (element.type == 'D') {
-                        fileObj['image'] = '/image/word.png'
-                      } else {
-                        fileObj['image'] = this.getFileImages(element.extension)
-                      }
-                      fileArr.push(fileObj)
-                    }
-                    this.yunFileByMeArr = fileArr
-                    this.broadcastWidgetHeight()
-                  }, (err) => {
-                    this.isShowBM = true
-                    this.isErrorBM = false
-                    this.broadcastWidgetHeight()
-                  })
-
-                this.getYunFileData('https://pan.bingosoft.net/openapi//file/share/list',
-                  objDataTo, token.accessToken,
-                  (res) => {
-                    this.isShowTM = true
-                    this.isErrorTM = true
-                    let fileArr = []
-                    for (let index = 0, resLength = res.rows.length; index < resLength; index++) {
-                      let fileObj = {}
-                      const element = res.rows[index];
-                      fileObj['name'] = element.name
-                      fileObj['id'] = element.fileId
-                      if (element.type == 'D') {
-                        fileObj['image'] = '/image/word.png'
-                      } else {
-                        fileObj['image'] = this.getFileImages(element.extension)
-                      }
-                      fileArr.push(fileObj)
-                    }
-                    this.yunFileToMeArr = fileArr
-                    this.broadcastWidgetHeight()
-                  }, (err) => {
-                    this.isShowTM = true
-                    this.isErrorTM = false
-                    this.broadcastWidgetHeight()
-                  })
-              }, (err) => {
-                this.error()
-              })
-            }, () => {
-              this.error()
-            });
-          },
-          (err) => {
+                fileArr.push(fileObj)
+              }
+              this.yunFileToMeArr = fileArr
+              this.broadcastWidgetHeight()
+            }, (err) => {
+              this.isShowTM = true
+              this.isErrorTM = false
+              this.broadcastWidgetHeight()
+            })
+          }, (err) => {
             this.error()
           })
+        }, () => {
+          this.error()
+        });
       },
       error() {
         this.isShowTM = true
@@ -257,8 +226,7 @@
         let _params = this.$getPageParams();
         setTimeout(() => {
           dom.getComponentRect(this.$refs.wrap, (ret) => {
-            var channel = new BroadcastChannel('WidgetsMessage')
-            channel.postMessage({
+            this.channel.postMessage({
               widgetHeight: ret.size.height,
               id: _params.id
             });
@@ -268,6 +236,11 @@
       }
     },
     mounted() {
+      this.channel.onmessage = (event) => {
+        if (event.data.action === 'RefreshData') {
+          this.getYunFile()
+        }
+      }
       this.getYunFile()
     }
   }
